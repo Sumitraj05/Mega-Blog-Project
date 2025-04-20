@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Button, Input, RTE, Select } from "..";
 import appwriteService from "../../appwrite/config";
@@ -18,65 +18,54 @@ export default function PostForm({ post }) {
     const navigate = useNavigate();
     const userData = useSelector((state) => state.auth.userData);
 
-    // Debug userData
-    console.log("🔍 Redux userData:", userData);
-    console.log("✅ Extracted userId:", userData?.$id);
-
     const submit = async (data) => {
         try {
-            console.log("📤 Form Data Before Processing:", data);
-
-            let featuredImageId = post?.featuredImage || "";
-
+            console.log("Form Data Before Processing:", data); // ✅ Debugging log
+    
+            let featuredImageId = post?.featuredImage || ""; // Use existing image if updating
+    
+            // ✅ Upload image if a new one is selected
             if (data.image && data.image[0]) {
-                console.log("🖼️ New Image Selected for Upload:", data.image[0]);
                 const uploadedFile = await appwriteService.uploadFile(data.image[0]);
-
+    
                 if (uploadedFile) {
                     featuredImageId = uploadedFile.$id;
-                    console.log("✅ Uploaded Image ID:", featuredImageId);
-
+                    console.log("Uploaded Image ID:", featuredImageId); // ✅ Debugging log
+    
+                    // ✅ Delete old image if updating a post
                     if (post?.featuredImage) {
-                        console.log("🧹 Deleting old image:", post.featuredImage);
                         await appwriteService.deleteFile(post.featuredImage);
                     }
-                } else {
-                    console.error("❌ Image upload failed");
                 }
             }
-
+    
+            // ✅ Ensure `featuredImageId` is NOT empty before proceeding
             if (!featuredImageId) {
-                console.error("❌ No featured image found. Cannot proceed.");
+                console.error("❌ No featured image found. Image upload failed.");
                 return;
             }
-
+    
+            // ✅ Prepare post data
             const postData = {
                 title: data.title,
                 slug: data.slug,
                 content: data.content,
-                featuredImage: featuredImageId,
+                featuredImage: featuredImageId, // ✅ Correct field name
                 status: data.status,
-                userId: userData?.$id,
+                userId: userData?.$id, // ✅ Ensure userId is included
             };
-
-            console.log("🧾 Final Post Data Being Sent:", postData);
-
-            if (!postData.userId) {
-                console.error("❌ Missing userId in postData!");
-                return;
-            }
-
+    
+            console.log("Final Post Data Being Sent:", postData); // ✅ Debugging log
+    
             let dbPost;
             if (post) {
-                console.log("📝 Updating Post:", post.$id);
                 dbPost = await appwriteService.updatePost(post.$id, postData);
             } else {
-                console.log("🆕 Creating New Post");
                 dbPost = await appwriteService.createPost(postData);
             }
-
-            console.log("✅ Post Created/Updated Successfully:", dbPost);
-
+    
+            console.log("Post Created/Updated Successfully:", dbPost); // ✅ Debugging log
+    
             if (dbPost) {
                 navigate(`/post/${dbPost.$id}`);
             }
@@ -84,6 +73,8 @@ export default function PostForm({ post }) {
             console.error("❌ Error creating/updating post:", error);
         }
     };
+    
+    
 
     const slugTransform = useCallback((value) => {
         if (value && typeof value === "string")
@@ -96,7 +87,7 @@ export default function PostForm({ post }) {
         return "";
     }, []);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const subscription = watch((value, { name }) => {
             if (name === "title") {
                 setValue("slug", slugTransform(value.title), { shouldValidate: true });
